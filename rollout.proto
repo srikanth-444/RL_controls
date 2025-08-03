@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package rollout;
+
+service RolloutService {
+  rpc RunRollout(RolloutRequest) returns (RolloutResponse);
+}
+
+message RolloutRequest {
+  string data_path = 1;
+  bytes weights=2;
+}
+
+message Tensor1D {
+  repeated float data = 1;
+}
+
+message RolloutResponse {
+  Tensor1D obs = 1;
+  Tensor1D actions = 2;
+  Tensor1D old_log_probs = 3;
+  Tensor1D returns = 4;
+  Tensor1D advantages = 5;
+}

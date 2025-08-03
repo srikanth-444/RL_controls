@@ -1,0 +1,10 @@
+grpcio
+grpcio-tools
+matplotlib==3.8.1
+numpy
+onnxruntime
+pandas==2.1.2
+protobuf
+seaborn==0.13.2
+torch
+tqdm
