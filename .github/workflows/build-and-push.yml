@@ -38,4 +38,4 @@ jobs:
             --cluster sunny-panda-ya1vzc \
             --service RL-service-uxjht2q6 \
             --force-new-deployment \
-            --region us-east-1
+            --region us-east-2
