@@ -24,7 +24,7 @@ def compute_returns_and_advantages( buffer):
         next_value = 0
 
         for i in reversed(range(len(rewards))):
-            gamma=0.99
+            gamma=0.95
             lam=0.95
             delta = rewards[i] + gamma * next_value * (1 - dones[i]) - values[i]
             gae = delta + gamma * lam * (1 - dones[i]) * gae
