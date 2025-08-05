@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 from time import time
 
 class PPOTrainer:
-    def __init__(self, model: TinyPhysicsModel,policy:PPOPolicy, data_path: str, gamma=0.99, lam=0.95, clip_eps=0.18, epochs=10, batch_size=256, lr=3e-4,debug: bool = False) -> None:
+    def __init__(self, model: TinyPhysicsModel,policy:PPOPolicy, data_path: str, gamma=0.95, lam=0.95, clip_eps=0.18, epochs=10, batch_size=64, lr=3e-4,debug: bool = False) -> None:
         self.model = model
         self.device= torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {self.device}")
@@ -212,15 +212,15 @@ class PPOTrainer:
                     all_old_log_probs.append(old_log_probs_tensor)
                     all_returns.append(returns_tensor)
                     all_advantages.append(advantages_tensor)
-                    all_rollout_rewards.append(reward)
+            #         all_rollout_rewards.append(reward)
             
-            avg_reward = sum(all_rollout_rewards) / len(all_rollout_rewards)
-            self.policy_logs["reward"].append(avg_reward)
+            # avg_reward = sum(all_rollout_rewards) / len(all_rollout_rewards)
+            # self.policy_logs["reward"].append(avg_reward)
 
             # Policy update
             self.update_policy(all_obs, all_actions, all_old_log_probs, all_returns, all_advantages)
             if(rollout_idx % 10 == 0):
-                accel,targ=self.evaluate_policy(self.env_list[0], render=False)  # Evaluate on the first environment
+                accel,targ,_=self.evaluate_policy(self.env_list[0], render=False)  # Evaluate on the first environment
                 all_accel.append(accel)
                 target= targ
             pbar.set_postfix({'networkcall_time': time_taken,'update_policy':time()-start_time-time_taken, 'num_failed_rollouts': count})

@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rrollout.proto\x12\x07rollout\"4\n\x0eRolloutRequest\x12\x11\n\tdata_path\x18\x01 \x01(\t\x12\x0f\n\x07weights\x18\x02 \x01(\x0c\"\x18\n\x08Tensor1D\x12\x0c\n\x04\x64\x61ta\x18\x01 \x03(\x02\"\xca\x01\n\x0fRolloutResponse\x12\x1e\n\x03obs\x18\x01 \x01(\x0b\x32\x11.rollout.Tensor1D\x12\"\n\x07\x61\x63tions\x18\x02 \x01(\x0b\x32\x11.rollout.Tensor1D\x12(\n\rold_log_probs\x18\x03 \x01(\x0b\x32\x11.rollout.Tensor1D\x12\"\n\x07returns\x18\x04 \x01(\x0b\x32\x11.rollout.Tensor1D\x12%\n\nadvantages\x18\x05 \x01(\x0b\x32\x11.rollout.Tensor1D2Q\n\x0eRolloutService\x12?\n\nRunRollout\x12\x17.rollout.RolloutRequest\x1a\x18.rollout.RolloutResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rrollout.proto\x12\x07rollout\"O\n\x0eRolloutRequest\x12\x11\n\tdata_path\x18\x01 \x01(\t\x12\x0f\n\x07weights\x18\x02 \x01(\x0c\x12\x0c\n\x04gama\x18\x03 \x01(\x02\x12\x0b\n\x03lam\x18\x04 \x01(\x02\"\x18\n\x08Tensor1D\x12\x0c\n\x04\x64\x61ta\x18\x01 \x03(\x02\"\xee\x01\n\x0fRolloutResponse\x12\x1e\n\x03obs\x18\x01 \x01(\x0b\x32\x11.rollout.Tensor1D\x12\"\n\x07\x61\x63tions\x18\x02 \x01(\x0b\x32\x11.rollout.Tensor1D\x12(\n\rold_log_probs\x18\x03 \x01(\x0b\x32\x11.rollout.Tensor1D\x12\"\n\x07returns\x18\x04 \x01(\x0b\x32\x11.rollout.Tensor1D\x12%\n\nadvantages\x18\x05 \x01(\x0b\x32\x11.rollout.Tensor1D\x12\"\n\x07rewards\x18\x06 \x01(\x0b\x32\x11.rollout.Tensor1D2Q\n\x0eRolloutService\x12?\n\nRunRollout\x12\x17.rollout.RolloutRequest\x1a\x18.rollout.RolloutResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,11 +32,11 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'rollout_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_ROLLOUTREQUEST']._serialized_start=26
-  _globals['_ROLLOUTREQUEST']._serialized_end=78
-  _globals['_TENSOR1D']._serialized_start=80
-  _globals['_TENSOR1D']._serialized_end=104
-  _globals['_ROLLOUTRESPONSE']._serialized_start=107
-  _globals['_ROLLOUTRESPONSE']._serialized_end=309
-  _globals['_ROLLOUTSERVICE']._serialized_start=311
-  _globals['_ROLLOUTSERVICE']._serialized_end=392
+  _globals['_ROLLOUTREQUEST']._serialized_end=105
+  _globals['_TENSOR1D']._serialized_start=107
+  _globals['_TENSOR1D']._serialized_end=131
+  _globals['_ROLLOUTRESPONSE']._serialized_start=134
+  _globals['_ROLLOUTRESPONSE']._serialized_end=372
+  _globals['_ROLLOUTSERVICE']._serialized_start=374
+  _globals['_ROLLOUTSERVICE']._serialized_end=455
 # @@protoc_insertion_point(module_scope)

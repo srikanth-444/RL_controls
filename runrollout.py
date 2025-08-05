@@ -66,7 +66,7 @@ class RolloutServicer(rollout_pb2_grpc.RolloutServiceServicer):
         self.policy.load_state_dict(state_dict)
         path_str = request.data_path.replace("\\", "/")  # Normalize path for Windows compatibility
         env = PPOEnv(self.model, Path(path_str), self.policy, debug=False)
-        obs, actions, old_log_probs, returns, advantages,rewards = run_rollout(env,gama=0.95, lam=0.95)
+        obs, actions, old_log_probs, returns, advantages,rewards = run_rollout(env,gama=gama, lam=lam)
 
         def flatten(tensor):
             return rollout_pb2.Tensor1D(data=tensor.flatten().tolist())
