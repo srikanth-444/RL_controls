@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 from time import time
 
 class PPOTrainer:
-    def __init__(self, model: TinyPhysicsModel,policy:PPOPolicy, data_path: str, gamma=0.99, lam=0.95, clip_eps=0.18, epochs=10, batch_size=1024, lr=3e-4,debug: bool = False) -> None:
+    def __init__(self, model: TinyPhysicsModel,policy:PPOPolicy, data_path: str, gamma=0.99, lam=0.95, clip_eps=0.18, epochs=10, batch_size=256, lr=3e-4,debug: bool = False) -> None:
         self.model = model
         self.device= torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {self.device}")
@@ -282,6 +282,8 @@ async def main():
 
 
         await trainer.train()
+        for env_path in tqdm(trainer.env_list[:100]):
+            trainer.evaluate_policy(env_path, render=False)
         trainer.evaluate_policy(r'.\data\00000.csv', render=True)
         trainer.plot_training_dynamics()
 
