@@ -154,7 +154,7 @@ class PPOTrainer:
             plt.grid()
             plt.show()  
 
-        return env.current_lataccel_history[CONTROL_START_IDX:], env.target_lataccel_history[CONTROL_START_IDX:] 
+        return env.current_lataccel_history[CONTROL_START_IDX:], env.target_lataccel_history[CONTROL_START_IDX:],np.mean(rewards)  # Return current lataccel, target lataccel, and average reward
     def plot_training_dynamics(self):
 
         keys = list(self.policy_logs.keys())
@@ -193,7 +193,7 @@ class PPOTrainer:
 
             # Launch parallel async requests
             tasks = [
-                        retry_request(lambda: run_single_request(self.stub, str(env_path), weights_bytes))
+                        retry_request(lambda: run_single_request(self.stub, str(env_path), weights_bytes,self.gamma, self.lam))
                         for env_path in env_paths
                     ]
             results = await asyncio.gather(*tasks,return_exceptions=True)
@@ -239,8 +239,8 @@ class PPOTrainer:
         plt.grid()
         plt.show()             
 
-async def run_single_request(stub, path, weights):
-    request = rollout_pb2.RolloutRequest(data_path=path,weights=weights)
+async def run_single_request(stub, path, weights,gama,lam):
+    request = rollout_pb2.RolloutRequest(data_path=path,weights=weights, gama=gama, lam=lam)  
     response = await stub.RunRollout(request)
 
     obs_tensor = torch.tensor(response.obs.data).view(-1, 20*6)  # reshape here
@@ -248,6 +248,7 @@ async def run_single_request(stub, path, weights):
     old_log_probs_tensor = torch.tensor(response.old_log_probs.data, dtype=torch.float32).unsqueeze(-1)  # ensure log_probs are 2D
     returns_tensor = torch.tensor(response.returns.data).unsqueeze(-1)  # ensure returns are 2D
     advantages_tensor = torch.tensor(response.advantages.data)
+    # rewards= torch.tensor(response.rewards.data)  # ensure rewards are 2D
 
     total_reward = returns_tensor.sum().item()
 
@@ -282,8 +283,11 @@ async def main():
 
 
         await trainer.train()
+        total_rewards = []
         for env_path in tqdm(trainer.env_list[:100]):
-            trainer.evaluate_policy(env_path, render=False)
+            _,_,rewards=trainer.evaluate_policy(env_path, render=False)
+            total_rewards.append(rewards)
+        print(f"Average Reward over 100 environments: {np.mean(total_rewards):.2f}")
         trainer.evaluate_policy(r'.\data\00000.csv', render=True)
         trainer.plot_training_dynamics()
 

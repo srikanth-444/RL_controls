@@ -9,6 +9,8 @@ service RolloutService {
 message RolloutRequest {
   string data_path = 1;
   bytes weights=2;
+  float gama=3;
+  float lam=4;
 }
 
 message Tensor1D {
@@ -21,4 +23,6 @@ message RolloutResponse {
   Tensor1D old_log_probs = 3;
   Tensor1D returns = 4;
   Tensor1D advantages = 5;
+  Tensor1D rewards=6;
 }
+ 

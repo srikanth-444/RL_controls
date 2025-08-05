@@ -13,7 +13,7 @@ from pathlib import Path
 import io
 
 
-def compute_returns_and_advantages( buffer):
+def compute_returns_and_advantages( buffer,gama=0.95, lam=0.95):
         rewards = [entry['reward'] for entry in buffer]
         values = [entry['value'] for entry in buffer]
         dones = [entry['done'] for entry in buffer]
@@ -24,23 +24,22 @@ def compute_returns_and_advantages( buffer):
         next_value = 0
 
         for i in reversed(range(len(rewards))):
-            gamma=0.95
-            lam=0.95
-            delta = rewards[i] + gamma * next_value * (1 - dones[i]) - values[i]
-            gae = delta + gamma * lam * (1 - dones[i]) * gae
+            
+            delta = rewards[i] + gama * next_value * (1 - dones[i]) - values[i]
+            gae = delta + gama * lam * (1 - dones[i]) * gae
             advantages.insert(0, gae)
             next_value = values[i]
             returns.insert(0, gae + values[i])
 
         return returns, advantages
-def run_rollout( env: PPOEnv) -> None:
+def run_rollout( env: PPOEnv,gama,lam) -> None:
             env.reset()
             env.rollout_buffer = []  # Reset the rollout buffer
             done = False
             while not done:
                 _, _, _, done = env.step()
             buffer = env.rollout_buffer
-            returns, advantages =compute_returns_and_advantages(buffer)
+            returns, advantages =compute_returns_and_advantages(buffer, gama, lam)
             # Normalize advantages
             advantages = torch.tensor(advantages, dtype=torch.float32)
             advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
@@ -50,8 +49,9 @@ def run_rollout( env: PPOEnv) -> None:
             actions = torch.tensor([entry["action"] for entry in buffer], dtype=torch.float32).unsqueeze(-1)
             old_log_probs = torch.tensor([entry["log_prob"] for entry in buffer], dtype=torch.float32).unsqueeze(-1)
             returns = torch.tensor(returns, dtype=torch.float32).unsqueeze(-1)
+            rewards = torch.tensor([entry["reward"] for entry in buffer], dtype=torch.float32).unsqueeze(-1)
             
-            return obs, actions, old_log_probs, returns, advantages
+            return obs, actions, old_log_probs, returns, advantages,rewards
 
 class RolloutServicer(rollout_pb2_grpc.RolloutServiceServicer):
     def __init__(self):
@@ -59,12 +59,14 @@ class RolloutServicer(rollout_pb2_grpc.RolloutServiceServicer):
         self.policy = PPOPolicy(input_dim=(20 * 6))
 
     def RunRollout(self, request, context):
+        gama =request.gama
+        lam = request.lam
         buffer = io.BytesIO(request.weights)
         state_dict = torch.load(buffer, map_location="cpu")
         self.policy.load_state_dict(state_dict)
         path_str = request.data_path.replace("\\", "/")  # Normalize path for Windows compatibility
         env = PPOEnv(self.model, Path(path_str), self.policy, debug=False)
-        obs, actions, old_log_probs, returns, advantages = run_rollout(env)
+        obs, actions, old_log_probs, returns, advantages,rewards = run_rollout(env,gama=0.95, lam=0.95)
 
         def flatten(tensor):
             return rollout_pb2.Tensor1D(data=tensor.flatten().tolist())
@@ -75,6 +77,7 @@ class RolloutServicer(rollout_pb2_grpc.RolloutServiceServicer):
             old_log_probs=flatten(old_log_probs),
             returns=flatten(returns),
             advantages=flatten(advantages),
+            rewards=flatten(rewards),
         )
 
 def serve():
