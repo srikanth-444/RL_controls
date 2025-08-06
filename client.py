@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 from time import time
 
 class PPOTrainer:
-    def __init__(self, model: TinyPhysicsModel,policy:PPOPolicy, data_path: str, gamma=0.95, lam=0.95, clip_eps=0.18, epochs=10, batch_size=64, lr=3e-4,debug: bool = False) -> None:
+    def __init__(self, model: TinyPhysicsModel,policy:PPOPolicy, data_path: str, gamma=0.97, lam=0.9, clip_eps=0.18, epochs=10, batch_size=64, lr=3e-4,debug: bool = False) -> None:
         self.model = model
         self.device= torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {self.device}")
@@ -35,7 +35,10 @@ class PPOTrainer:
                 "value": [],
                 "entropy": [],
                 "log_prob": [],
-                "reward": []
+                "reward": [],
+                "policy_loss": [],
+                "value_loss": [],
+                "total_loss": []
             }
 
     def create_env(self,data_path: str) -> List[str]:
@@ -77,10 +80,14 @@ class PPOTrainer:
                 surr1 = ratio * advantages.unsqueeze(-1)
                 surr2 = torch.clamp(ratio, 1 - self.clip_eps, 1 + self.clip_eps) * advantages.unsqueeze(-1)
                 policy_loss = -torch.min(surr1, surr2).mean()
+                self.policy_logs["policy_loss"].append(policy_loss.item())
 
                 value_loss = ((returns - values) ** 2).mean()
+                self.policy_logs["value_loss"].append(value_loss.item())
 
-                total_loss = 100*policy_loss + 0.5 * value_loss - 0.02 * entropy
+                total_loss = 10*policy_loss + 0.5 * value_loss - 0.02 * entropy
+
+                self.policy_logs["total_loss"].append(total_loss.item())
 
                 self.optimizer.zero_grad()
                 total_loss.backward()
@@ -161,7 +168,7 @@ class PPOTrainer:
         plt.figure(figsize=(20, 12))
 
         for i, key in enumerate(keys):
-            plt.subplot(3, 2, i + 1)
+            plt.subplot(3, 3, i + 1)
             plt.plot(self.policy_logs[key])
             plt.title(key.capitalize())
             plt.grid()
