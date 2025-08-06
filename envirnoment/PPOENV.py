@@ -110,11 +110,11 @@ class PPOEnv:
         else:
             jerk = 0.0
         error = abs(current_lataccel - target)
-        if error < 0.5:
+        if error < 0.05:
             reward = 1.0
         elif error < 2:
             # Linearly decreasing reward between 0.5 and max_error
-            reward = - (error - 0.5) / (2 - 0.5)
+            reward = - (error - 0.05) / (2 - 0.5)
         else:
             reward = -10.0
         # reward = -((current_lataccel - target)**2 * 50 + jerk**2 * 1)
