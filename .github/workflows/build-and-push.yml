@@ -29,13 +29,22 @@ jobs:
       - name: Tag image
         run: docker tag my-app:latest 165066919303.dkr.ecr.us-east-2.amazonaws.com/rl/env_rollout
 
+      - name: Scale service down to 0 before update
+        run: |
+          aws ecs update-service \
+            --cluster sunny-panda-ya1vzc \
+            --service RL-service-uxjht2q6 \
+            --desired-count 0 \
+            --region us-east-2
+
       - name: Push image to ECR
         run: docker push 165066919303.dkr.ecr.us-east-2.amazonaws.com/rl/env_rollout
-        
+
       - name: Deploy to ECS
         run: |
           aws ecs update-service \
             --cluster sunny-panda-ya1vzc \
             --service RL-service-uxjht2q6 \
+            --desired-count 30 \
             --force-new-deployment \
             --region us-east-2
