@@ -85,7 +85,7 @@ class PPOTrainer:
                 value_loss = ((returns - values) ** 2).mean()
                 self.policy_logs["value_loss"].append(value_loss.item())
 
-                total_loss = 10*policy_loss + 0.5 * value_loss - 0.02 * entropy
+                total_loss = 100*policy_loss + 0.5 * value_loss - 0.02 * entropy
 
                 self.policy_logs["total_loss"].append(total_loss.item())
 

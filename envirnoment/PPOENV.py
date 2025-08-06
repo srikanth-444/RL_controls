@@ -109,15 +109,15 @@ class PPOEnv:
             jerk = (self.current_lataccel_history[-1] - self.current_lataccel_history[-2]) / tinyphysics.DEL_T
         else:
             jerk = 0.0
-        error = abs(current_lataccel - target)
-        if error < 0.05:
-            reward = 0
-        elif error < 2:
-            # Linearly decreasing reward between 0.5 and max_error
-            reward = - (error - 0.05) / (2 - 0.5)
-        else:
-            reward = -10.0
-        # reward = -((current_lataccel - target)**2 * 50 + jerk**2 * 1)
+        # error = abs(current_lataccel - target)
+        # if error < 0.05:
+        #     reward = 0
+        # elif error < 2:
+        #     # Linearly decreasing reward between 0.5 and max_error
+        #     reward = - (error - 0.05) / (2 - 0.5)
+        # else:
+        #     reward = -10.0
+        reward = -((current_lataccel - target)**2 * 50 + jerk**2 * 1)
         # Done condition
         done = self.step_idx >= len(self.data)
 
