@@ -6,16 +6,16 @@ class PPOPolicy(nn.Module):
         super().__init__()
       
         self.actor = nn.Sequential(
-            nn.Linear(input_dim, 128), nn.Tanh(),
-            nn.Linear(128, 64), nn.Tanh(),
-            nn.Linear(64, 1)  # mean output for steering
+            nn.Linear(input_dim, 64), nn.Tanh(),
+            nn.Linear(64, 32), nn.Tanh(),
+            nn.Linear(32, 1)  # mean output for steering
         )
         self.log_std = nn.Parameter(torch.zeros(1))  # trainable log std
 
         self.critic = nn.Sequential(
-            nn.Linear(input_dim, 128), nn.Tanh(),
-            nn.Linear(128, 64), nn.Tanh(),
-            nn.Linear(64, 1)
+            nn.Linear(input_dim, 64), nn.Tanh(),
+            nn.Linear(64, 32), nn.Tanh(),
+            nn.Linear(32, 1)
         )
 
     def forward(self, x):

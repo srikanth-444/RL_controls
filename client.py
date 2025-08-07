@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 from time import time
 
 class PPOTrainer:
-    def __init__(self, model: TinyPhysicsModel,policy:PPOPolicy, data_path: str, gamma=0.95, lam=0.95, clip_eps=0.2, epochs=20, batch_size=256, lr=3e-4,debug: bool = False) -> None:
+    def __init__(self, model: TinyPhysicsModel,policy:PPOPolicy, data_path: str, gamma=0.99, lam=0.95, clip_eps=0.2, epochs=10, batch_size=256, lr=3e-4,debug: bool = False) -> None:
         self.model = model
         self.device= torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {self.device}")
@@ -219,10 +219,10 @@ class PPOTrainer:
                     all_old_log_probs.append(old_log_probs_tensor)
                     all_returns.append(returns_tensor)
                     all_advantages.append(advantages_tensor)
-            #         all_rollout_rewards.append(reward)
+                    all_rollout_rewards.append(reward)
             
-            # avg_reward = sum(all_rollout_rewards) / len(all_rollout_rewards)
-            # self.policy_logs["reward"].append(avg_reward)
+            avg_reward = sum(all_rollout_rewards) / len(all_rollout_rewards)
+            self.policy_logs["reward"].append(avg_reward)
 
             # Policy update
             self.update_policy(all_obs, all_actions, all_old_log_probs, all_returns, all_advantages)
@@ -255,9 +255,9 @@ async def run_single_request(stub, path, weights,gama,lam):
     old_log_probs_tensor = torch.tensor(response.old_log_probs.data, dtype=torch.float32).unsqueeze(-1)  # ensure log_probs are 2D
     returns_tensor = torch.tensor(response.returns.data).unsqueeze(-1)  # ensure returns are 2D
     advantages_tensor = torch.tensor(response.advantages.data)
-    # rewards= torch.tensor(response.rewards.data)  # ensure rewards are 2D
+    rewards= torch.tensor(response.rewards.data)  # ensure rewards are 2D
 
-    total_reward = returns_tensor.sum().item()
+    total_reward = rewards.mean().item()
 
     return (
         obs_tensor,
