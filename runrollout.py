@@ -11,13 +11,15 @@ from policy.ppopolicy import PPOPolicy
 from tinyphysics import TinyPhysicsModel
 from pathlib import Path
 import io
+import numpy as np
 
 
-def compute_returns_and_advantages( buffer,gama=0.95, lam=0.95):
-        rewards = [entry['reward'] for entry in buffer]
-        values = [entry['value'] for entry in buffer]
-        dones = [entry['done'] for entry in buffer]
-
+def compute_returns_and_advantages( buffer,gama=0.99, lam=0.95):
+        rewards = np.array([entry['reward'] for entry in buffer], dtype=np.float32)
+        values = np.array([entry['value'] for entry in buffer], dtype=np.float32)
+        dones = np.array([entry['done'] for entry in buffer], dtype=np.float32)
+        # Normalize rewards to zero mean and unit variance
+        normalized_rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-8)
         returns = []
         advantages = []
         gae = 0
@@ -25,7 +27,7 @@ def compute_returns_and_advantages( buffer,gama=0.95, lam=0.95):
 
         for i in reversed(range(len(rewards))):
             
-            delta = rewards[i] + gama * next_value * (1 - dones[i]) - values[i]
+            delta = normalized_rewards[i] + gama * next_value * (1 - dones[i]) - values[i]
             gae = delta + gama * lam * (1 - dones[i]) * gae
             advantages.insert(0, gae)
             next_value = values[i]
