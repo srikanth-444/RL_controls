@@ -13,8 +13,8 @@ class PPOPolicy(nn.Module):
         self.log_std = nn.Parameter(torch.zeros(1))  # trainable log std
 
         self.critic = nn.Sequential(
-            nn.Linear(input_dim, 128), nn.ReLU(),
-            nn.Linear(128, 64), nn.ReLU(),
+            nn.Linear(input_dim, 128), nn.Tanh(),
+            nn.Linear(128, 64), nn.Tanh(),
             nn.Linear(64, 1)
         )
 

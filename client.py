@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 from time import time
 
 class PPOTrainer:
-    def __init__(self, model: TinyPhysicsModel,policy:PPOPolicy, data_path: str, gamma=0.99, lam=0.92, clip_eps=0.18, epochs=10, batch_size=64, lr=3e-4,debug: bool = False) -> None:
+    def __init__(self, model: TinyPhysicsModel,policy:PPOPolicy, data_path: str, gamma=0.95, lam=0.95, clip_eps=0.2, epochs=20, batch_size=256, lr=3e-4,debug: bool = False) -> None:
         self.model = model
         self.device= torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {self.device}")
@@ -85,7 +85,7 @@ class PPOTrainer:
                 value_loss = ((returns - values) ** 2).mean()
                 self.policy_logs["value_loss"].append(value_loss.item())
 
-                total_loss = 100*policy_loss + 0.5 * value_loss/1e4 - 0.02 * entropy
+                total_loss = 100*policy_loss + 0.5 * value_loss - 0.02 * entropy
 
                 self.policy_logs["total_loss"].append(total_loss.item())
 
