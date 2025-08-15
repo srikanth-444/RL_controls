@@ -15,6 +15,12 @@ import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
 from time import time
+import subprocess
+import boto3
+
+CLUSTER_NAME = "sunny-panda-ya1vzc"
+SERVICE_NAME = "RL-service-uxjht2q6"
+ecs = boto3.client('ecs')
 
 class PPOTrainer:
     def __init__(self, model: TinyPhysicsModel,policy:PPOPolicy, data_path: str, gamma=0.99, lam=0.95, clip_eps=0.2, epochs=10, batch_size=256, lr=3e-4,debug: bool = False) -> None:
@@ -56,17 +62,19 @@ class PPOTrainer:
         old_log_probs = torch.cat(old_log_probs, dim=0).to(device=self.device)
         returns = torch.cat(returns, dim=0).to(device=self.device)
         advantages = torch.cat(advantages, dim=0).to(device=self.device)
-        # print("obs shape:", obs.shape)
-        # print("actions shape:", actions.shape)
+        
         for epoch in range(self.epochs):
                 # Optional: sample mini-batches here for large datasets
                 mean, std, values = self.policy(obs)
-                # print("mean shape:", mean.shape)
-                # print("std shape:", std.shape)
-                # print("value shape:",values.shape)
+
+                if std.item()<0.3:
+                    subprocess.Popen([r"D:\Users\popur\PPO_trainner\aws_shutdown.cmd"], shell=True)  # Shutdown the machine if std is too low
+
+                    return True
+                
                 dist = torch.distributions.Normal(mean, std)
                 
-                # print("actions shape:", actions.shape)
+                
                 log_probs = dist.log_prob(actions)
                 entropy = dist.entropy().mean()
                 with torch.no_grad():
@@ -92,6 +100,7 @@ class PPOTrainer:
                 self.optimizer.zero_grad()
                 total_loss.backward()
                 self.optimizer.step()
+        return False  # Return False to indicate training was successful
 
 
     def sample_env_batch(self, batch_size=4):
@@ -177,7 +186,7 @@ class PPOTrainer:
         plt.show()
     
 
-    async def train(self, num_rollouts=100):
+    async def train(self, num_rollouts=1000):
         
         pbar = tqdm(range(num_rollouts), desc='Training PPO')
         all_accel = []
@@ -225,7 +234,10 @@ class PPOTrainer:
             self.policy_logs["reward"].append(avg_reward)
 
             # Policy update
-            self.update_policy(all_obs, all_actions, all_old_log_probs, all_returns, all_advantages)
+            if(self.update_policy(all_obs, all_actions, all_old_log_probs, all_returns, all_advantages)):
+                print("Training stopped due to low std deviation in policy output.")
+                break
+            torch.save(self.policy.state_dict(), "model_weights.pth")
             if(rollout_idx % 10 == 0):
                 accel,targ,_=self.evaluate_policy(self.env_list[0], render=False)  # Evaluate on the first environment
                 all_accel.append(accel)
@@ -235,7 +247,8 @@ class PPOTrainer:
         base_alpha = 0.1
         max_alpha = 1.0
         for i in range(len(all_accel)):
-            alpha = base_alpha + (max_alpha - base_alpha) * (i / (len(all_accel) - 1))  # linearly increase alpha
+            N = len(all_accel) - 1
+            alpha = base_alpha * ((max_alpha / base_alpha) ** (i / N))
             plt.plot(all_accel[i], color='tab:blue', alpha=alpha)
                  
         plt.plot(target, label="Target LatAccel",color='tab:orange',linestyle="--")
@@ -277,7 +290,20 @@ async def retry_request(fn, retries=3, delay=1):
                 await asyncio.sleep(delay)
             else:
                 return e
+def any_task_running():
+    tasks = ecs.list_tasks(cluster=CLUSTER_NAME, serviceName=SERVICE_NAME)
+    if not tasks["taskArns"]:
+        return False
+
+    details = ecs.describe_tasks(cluster=CLUSTER_NAME, tasks=tasks["taskArns"])
+    return any(task["lastStatus"] == "RUNNING" for task in details["tasks"])
+
 async def main():
+    print("Waiting for a task to start running...")
+    while not any_task_running():
+        time.sleep(5)
+
+    print("✅ Task running — doing my work now...")
     async with grpc.aio.secure_channel('envrollout.click:50051',grpc.ssl_channel_credentials()) as channel:
         stub = rollout_pb2_grpc.RolloutServiceStub(channel)
 

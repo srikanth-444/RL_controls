@@ -1,0 +1,3 @@
+@echo off
+echo Running AWS deployment script...
+aws ecs update-service --cluster sunny-panda-ya1vzc --service RL-service-uxjht2q6 --desired-count 0 --region us-east-2
