@@ -14,13 +14,13 @@ import io
 import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
-from time import time
+from time import time,sleep
 import subprocess
 import boto3
 
 CLUSTER_NAME = "sunny-panda-ya1vzc"
 SERVICE_NAME = "RL-service-uxjht2q6"
-ecs = boto3.client('ecs')
+ecs = boto3.client('ecs' , region_name='us-east-2')
 
 class PPOTrainer:
     def __init__(self, model: TinyPhysicsModel,policy:PPOPolicy, data_path: str, gamma=0.99, lam=0.95, clip_eps=0.2, epochs=10, batch_size=256, lr=3e-4,debug: bool = False) -> None:
@@ -68,7 +68,12 @@ class PPOTrainer:
                 mean, std, values = self.policy(obs)
 
                 if std.item()<0.3:
-                    subprocess.Popen([r"D:\Users\popur\PPO_trainner\aws_shutdown.cmd"], shell=True)  # Shutdown the machine if std is too low
+                    response = ecs.update_service(
+                        cluster=CLUSTER_NAME,
+                        service=SERVICE_NAME,
+                        desiredCount=0
+                    )
+                    print("service updated:",response)
 
                     return True
                 
@@ -301,7 +306,7 @@ def any_task_running():
 async def main():
     print("Waiting for a task to start running...")
     while not any_task_running():
-        time.sleep(5)
+        sleep(5)
 
     print("✅ Task running — doing my work now...")
     async with grpc.aio.secure_channel('envrollout.click:50051',grpc.ssl_channel_credentials()) as channel:
