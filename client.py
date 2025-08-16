@@ -319,7 +319,6 @@ async def main():
         trainer = PPOTrainer(model=model, policy=policy, data_path=data_dir, debug=False)
         trainer.stub = stub  # 🔁 attach the stub to the trainer
 
-
         await trainer.train()
         total_rewards = []
         for env_path in tqdm(trainer.env_list[:100]):
