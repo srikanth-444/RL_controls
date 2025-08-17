@@ -58,7 +58,7 @@ def run_rollout( env: PPOEnv,gama,lam) -> None:
 class RolloutServicer(rollout_pb2_grpc.RolloutServiceServicer):
     def __init__(self):
         self.model = TinyPhysicsModel("./models/tinyphysics.onnx", debug=False)
-        self.policy = PPOPolicy(input_dim=(20 * 6))
+        self.policy = PPOPolicy(input_dim=(20 * 10))
 
     def RunRollout(self, request, context):
         gama =request.gama

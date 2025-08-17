@@ -85,12 +85,28 @@ class PPOEnv:
         a_ego=[s.a_ego for s in self.state_history[-CONTEXT_LENGTH:]]
         v_ego=[s.v_ego for s in self.state_history[-CONTEXT_LENGTH:]]
         roll_lataccel=[s.roll_lataccel for s in self.state_history[-CONTEXT_LENGTH:]]
+        if len(self.futureplan.lataccel) < CONTEXT_LENGTH:
+            # Pad future plan with zeros if not enough data
+            pad_length = CONTEXT_LENGTH - len(self.futureplan.lataccel)
+            last_val = self.futureplan.lataccel[-1] if self.futureplan.lataccel else 0.0
+            self.futureplan.lataccel.extend([last_val] * pad_length)
+            last_val = self.futureplan.roll_lataccel[-1] if self.futureplan.roll_lataccel else 0.0
+            self.futureplan.roll_lataccel.extend([last_val] * pad_length)
+            last_val = self.futureplan.v_ego[-1] if self.futureplan.v_ego else 0.0
+            self.futureplan.v_ego.extend([last_val] * pad_length)
+            last_val = self.futureplan.a_ego[-1] if self.futureplan.a_ego else 0.0
+            self.futureplan.a_ego.extend([last_val] * pad_length)
+        
         input=np.column_stack((self.action_history[-CONTEXT_LENGTH:],
                                roll_lataccel[-CONTEXT_LENGTH:],
                                v_ego[-CONTEXT_LENGTH:],
                                a_ego[-CONTEXT_LENGTH:],
                                self.current_lataccel_history[-CONTEXT_LENGTH:],
-                               self.target_lataccel_history[-CONTEXT_LENGTH:]))
+                               self.target_lataccel_history[-CONTEXT_LENGTH:],
+                               self.futureplan.lataccel[:CONTEXT_LENGTH],
+                               self.futureplan.a_ego[:CONTEXT_LENGTH],
+                               self.futureplan.roll_lataccel[:CONTEXT_LENGTH],
+                               self.futureplan.v_ego[:CONTEXT_LENGTH]))
         input_tensor = torch.tensor(input, dtype=torch.float32).flatten().unsqueeze(0)  # Shape: (1, input_dim)
 
         # Get action distribution from policy
