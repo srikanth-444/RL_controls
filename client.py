@@ -23,7 +23,7 @@ SERVICE_NAME = "RL-service-uxjht2q6"
 ecs = boto3.client('ecs' , region_name='us-east-2')
 
 class PPOTrainer:
-    def __init__(self, model: TinyPhysicsModel,policy:PPOPolicy, data_path: str, gamma=0.99, lam=0.95, clip_eps=0.2, epochs=10, batch_size=256, lr=3e-4,debug: bool = False) -> None:
+    def __init__(self, model: TinyPhysicsModel,policy:PPOPolicy, data_path: str, gamma=0.99, lam=0.95, clip_eps=0.2, epochs=10, batch_size=1, lr=3e-4,debug: bool = False) -> None:
         self.model = model
         self.device= torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {self.device}")
@@ -118,44 +118,8 @@ class PPOTrainer:
         rewards = []
 
         while not done:
-            state, target, _ = env.get_state_target_futureplan(env.step_idx)
-
-            last_action = env.action_history[-1]
-            last_lataccel = env.current_lataccel_history[-1]
-
-            a_ego=[s.a_ego for s in env.state_history[-CONTEXT_LENGTH:]]
-            v_ego=[s.v_ego for s in env.state_history[-CONTEXT_LENGTH:]]
-            roll_lataccel=[s.roll_lataccel for s in env.state_history[-CONTEXT_LENGTH:]]
-            input=np.column_stack((env.action_history[-CONTEXT_LENGTH:],
-                                roll_lataccel[-CONTEXT_LENGTH:],
-                                v_ego[-CONTEXT_LENGTH:],
-                                a_ego[-CONTEXT_LENGTH:],
-                                env.current_lataccel_history[-CONTEXT_LENGTH:],
-                                env.target_lataccel_history[-CONTEXT_LENGTH:]))
-            input_tensor = torch.tensor(input, dtype=torch.float32).flatten().unsqueeze(0)
-            input_tensor = input_tensor.to(self.device)  # Move to device
-
-            # Get action from policy
-            with torch.no_grad():
-                mean, std, _ = env.policy(input_tensor)
-                dist = torch.distributions.Normal(mean, std)
-                action = dist.mean.item()  # or sample with dist.sample().item()
-
-            env.action_history.append(action)
-            env.sim_step(env.step_idx)
-            env.state_history.append(state)
-            env.target_lataccel_history.append(target)
-            env.step_idx += 1
-
-            if len(env.current_lataccel_history) >= 2:
-                jerk = (env.current_lataccel_history[-1] - env.current_lataccel_history[-2]) / DEL_T
-            else:
-                jerk = 0.0
-
-            reward = -((env.current_lataccel - target)**2 * 5000 + jerk**2 * 100)
-            rewards.append(reward)
-
-            done = env.step_idx >= len(env.data)
+            cost, _, _, done = env.step()
+            rewards.append(cost)
 
         
 
@@ -191,7 +155,7 @@ class PPOTrainer:
         plt.show()
     
 
-    async def train(self, num_rollouts=1000):
+    async def train(self, num_rollouts=10):
         
         pbar = tqdm(range(num_rollouts), desc='Training PPO')
         all_accel = []
@@ -243,10 +207,10 @@ class PPOTrainer:
                 print("Training stopped due to low std deviation in policy output.")
                 break
             torch.save(self.policy.state_dict(), "model_weights.pth")
-            if(rollout_idx % 10 == 0):
-                accel,targ,_=self.evaluate_policy(self.env_list[0], render=False)  # Evaluate on the first environment
-                all_accel.append(accel)
-                target= targ
+            # if(rollout_idx % 10 == 0):
+            #     accel,targ,_=self.evaluate_policy(self.env_list[0], render=False)  # Evaluate on the first environment
+            #     all_accel.append(accel)
+            #     target= targ
             pbar.set_postfix({'networkcall_time': time_taken,'num_failed_rollouts': count, "value_loss": self.policy_logs["value_loss"][-1],})
         plt.figure(figsize=(20, 5))
         base_alpha = 0.1
@@ -256,19 +220,19 @@ class PPOTrainer:
             alpha = base_alpha * ((max_alpha / base_alpha) ** (i / N))
             plt.plot(all_accel[i], color='tab:blue', alpha=alpha)
                  
-        plt.plot(target, label="Target LatAccel",color='tab:orange',linestyle="--")
-        plt.xlabel("Step")
-        plt.ylabel("Lateral Acceleration")
-        plt.title("Policy Behavior Evaluation")
-        plt.legend()
-        plt.grid()
-        plt.show()             
+        # plt.plot(target, label="Target LatAccel",color='tab:orange',linestyle="--")
+        # plt.xlabel("Step")
+        # plt.ylabel("Lateral Acceleration")
+        # plt.title("Policy Behavior Evaluation")
+        # plt.legend()
+        # plt.grid()
+        # plt.show()             
 
 async def run_single_request(stub, path, weights,gama,lam):
     request = rollout_pb2.RolloutRequest(data_path=path,weights=weights, gama=gama, lam=lam)  
     response = await stub.RunRollout(request)
 
-    obs_tensor = torch.tensor(response.obs.data).view(-1, 20*6)  # reshape here
+    obs_tensor = torch.tensor(response.obs.data).view(-1, 10*10)  # reshape here
     actions_tensor = torch.tensor(response.actions.data,dtype=torch.float32).unsqueeze(-1)  # ensure actions are 2D
     old_log_probs_tensor = torch.tensor(response.old_log_probs.data, dtype=torch.float32).unsqueeze(-1)  # ensure log_probs are 2D
     returns_tensor = torch.tensor(response.returns.data).unsqueeze(-1)  # ensure returns are 2D
@@ -304,16 +268,17 @@ def any_task_running():
     return any(task["lastStatus"] == "RUNNING" for task in details["tasks"])
 
 async def main():
-    print("Waiting for a task to start running...")
-    while not any_task_running():
-        sleep(5)
+    # print("Waiting for a task to start running...")
+    # while not any_task_running():
+    #     sleep(5)
 
-    print("✅ Task running — doing my work now...")
+    # print("✅ Task running — doing my work now...")
     async with grpc.aio.secure_channel('envrollout.click:50051',grpc.ssl_channel_credentials()) as channel:
+    # async with grpc.aio.insecure_channel("localhost:50051") as channel:
         stub = rollout_pb2_grpc.RolloutServiceStub(channel)
 
         model = TinyPhysicsModel("./models/tinyphysics.onnx", debug=False)
-        policy = PPOPolicy(input_dim=(20 * 6))
+        policy = PPOPolicy(input_dim=(10 * 10))
         data_dir = Path("./data")
 
         trainer = PPOTrainer(model=model, policy=policy, data_path=data_dir, debug=False)
@@ -321,7 +286,7 @@ async def main():
 
         await trainer.train()
         total_rewards = []
-        for env_path in tqdm(trainer.env_list[:100]):
+        for env_path in tqdm(trainer.env_list[:1]):
             _,_,rewards=trainer.evaluate_policy(env_path, render=False)
             total_rewards.append(rewards)
         print(f"Average Reward over 100 environments: {np.mean(total_rewards):.2f}")

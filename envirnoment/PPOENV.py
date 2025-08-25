@@ -15,10 +15,11 @@ FuturePlan = namedtuple('FuturePlan', ['lataccel', 'roll_lataccel', 'v_ego', 'a_
 
 class PPOEnv:
     def __init__(self, model: TinyPhysicsModel, data_path: str, policy:PPOPolicy, debug: bool = False) -> None:
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.data_path = data_path
         self.sim_model = model
         self.data = self.get_data(data_path)
-        self.policy = policy  # Assuming 3 input features: roll_lataccel, v_ego, a_ego
+        self.policy = policy.to(self.device)  # Assuming 3 input features: roll_lataccel, v_ego, a_ego
         self.debug = debug
         self.reset()
         self.integral_error=0
@@ -97,18 +98,18 @@ class PPOEnv:
             last_val = self.futureplan.a_ego[-1] if self.futureplan.a_ego else 0.0
             self.futureplan.a_ego.extend([last_val] * pad_length)
         
-        input=np.column_stack((self.action_history[-CONTEXT_LENGTH:],
-                               roll_lataccel[-CONTEXT_LENGTH:],
-                               v_ego[-CONTEXT_LENGTH:],
-                               a_ego[-CONTEXT_LENGTH:],
-                               self.current_lataccel_history[-CONTEXT_LENGTH:],
-                               self.target_lataccel_history[-CONTEXT_LENGTH:],
-                               self.futureplan.lataccel[:CONTEXT_LENGTH],
-                               self.futureplan.a_ego[:CONTEXT_LENGTH],
-                               self.futureplan.roll_lataccel[:CONTEXT_LENGTH],
-                               self.futureplan.v_ego[:CONTEXT_LENGTH]))
-        input_tensor = torch.tensor(input, dtype=torch.float32).flatten().unsqueeze(0)  # Shape: (1, input_dim)
-
+        input=np.column_stack((self.action_history[-int(CONTEXT_LENGTH/2):],
+                               roll_lataccel[-int(CONTEXT_LENGTH/2):],
+                               v_ego[-int(CONTEXT_LENGTH/2):],
+                               a_ego[-int(CONTEXT_LENGTH/2):],
+                               self.current_lataccel_history[-int(CONTEXT_LENGTH/2):],
+                               self.target_lataccel_history[-int(CONTEXT_LENGTH/2):],
+                               self.futureplan.lataccel[:int(CONTEXT_LENGTH/2)],
+                               self.futureplan.a_ego[:int(CONTEXT_LENGTH/2)],
+                               self.futureplan.roll_lataccel[:int(CONTEXT_LENGTH/2)],
+                               self.futureplan.v_ego[:int(CONTEXT_LENGTH/2)]))
+        input_tensor = torch.tensor(input, dtype=torch.float32).flatten().unsqueeze(0).to(self.device)  # Shape: (1, input_dim)
+        # print(input_tensor.shape)
         # Get action distribution from policy
         mean, std, value = self.policy(input_tensor)
         dist = torch.distributions.Normal(mean, std)
@@ -149,5 +150,5 @@ class PPOEnv:
             "reward": reward,
             "done": done
         })
-
-        return reward, value.item(), log_prob.item(), done
+        cost=((current_lataccel - target)**2 * 5000 + jerk**2 * 100)
+        return cost, value.item(), log_prob.item(), done
