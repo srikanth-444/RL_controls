@@ -1,7 +1,7 @@
 # PPO Environment Rollout with AWS Fargate
 
 This repository showcases a **Proximal Policy Optimization (PPO)** reinforcement learning setup deployed via **AWS Fargate**.  
-The goal is to demonstrate a **CI/CD pipeline** for scaling environment rollouts in the cloud.
+The goal is to demonstrate a **CI/CD pipeline** for scaling environment rollouts in the cloud using GRPC Communication protocol.
 
 ---
 
@@ -16,7 +16,7 @@ The goal is to demonstrate a **CI/CD pipeline** for scaling environment rollouts
 ```
 +----------------+ +-------------------+ +----------------+
 | PPO Trainer | <----> | Env Rollouts | <----> | AWS Fargate |
-| (CI/CD Pipeline)| | (Containers) | | (Containers) |
+| Local       |        | (Containers) |        | (Containers)|
 +----------------+ +-------------------+ +----------------+
 ```
 
