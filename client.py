@@ -23,7 +23,7 @@ SERVICE_NAME = "RL-service-uxjht2q6"
 ecs = boto3.client('ecs' , region_name='us-east-2')
 
 class PPOTrainer:
-    def __init__(self, model: TinyPhysicsModel,policy:PPOPolicy, data_path: str, gamma=0.99, lam=0.95, clip_eps=0.2, epochs=10, batch_size=1, lr=3e-4,debug: bool = False) -> None:
+    def __init__(self, model: TinyPhysicsModel,policy:PPOPolicy, data_path: str, gamma=0.99, lam=0.95, clip_eps=0.2, epochs=10, batch_size=256, lr=3e-4,debug: bool = False) -> None:
         self.model = model
         self.device= torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {self.device}")
@@ -155,7 +155,7 @@ class PPOTrainer:
         plt.show()
     
 
-    async def train(self, num_rollouts=10):
+    async def train(self, num_rollouts=1000):
         
         pbar = tqdm(range(num_rollouts), desc='Training PPO')
         all_accel = []
@@ -207,10 +207,10 @@ class PPOTrainer:
                 print("Training stopped due to low std deviation in policy output.")
                 break
             torch.save(self.policy.state_dict(), "model_weights.pth")
-            # if(rollout_idx % 10 == 0):
-            #     accel,targ,_=self.evaluate_policy(self.env_list[0], render=False)  # Evaluate on the first environment
-            #     all_accel.append(accel)
-            #     target= targ
+            if(rollout_idx % 10 == 0):
+                accel,targ,_=self.evaluate_policy(self.env_list[0], render=False)  # Evaluate on the first environment
+                all_accel.append(accel)
+                target= targ
             pbar.set_postfix({'networkcall_time': time_taken,'num_failed_rollouts': count, "value_loss": self.policy_logs["value_loss"][-1],})
         plt.figure(figsize=(20, 5))
         base_alpha = 0.1
@@ -220,13 +220,13 @@ class PPOTrainer:
             alpha = base_alpha * ((max_alpha / base_alpha) ** (i / N))
             plt.plot(all_accel[i], color='tab:blue', alpha=alpha)
                  
-        # plt.plot(target, label="Target LatAccel",color='tab:orange',linestyle="--")
-        # plt.xlabel("Step")
-        # plt.ylabel("Lateral Acceleration")
-        # plt.title("Policy Behavior Evaluation")
-        # plt.legend()
-        # plt.grid()
-        # plt.show()             
+        plt.plot(target, label="Target LatAccel",color='tab:orange',linestyle="--")
+        plt.xlabel("Step")
+        plt.ylabel("Lateral Acceleration")
+        plt.title("Policy Behavior Evaluation")
+        plt.legend()
+        plt.grid()
+        plt.show()             
 
 async def run_single_request(stub, path, weights,gama,lam):
     request = rollout_pb2.RolloutRequest(data_path=path,weights=weights, gama=gama, lam=lam)  
@@ -268,11 +268,11 @@ def any_task_running():
     return any(task["lastStatus"] == "RUNNING" for task in details["tasks"])
 
 async def main():
-    # print("Waiting for a task to start running...")
-    # while not any_task_running():
-    #     sleep(5)
+    print("Waiting for a task to start running...")
+    while not any_task_running():
+        sleep(5)
 
-    # print("✅ Task running — doing my work now...")
+    print("✅ Task running — doing my work now...")
     async with grpc.aio.secure_channel('envrollout.click:50051',grpc.ssl_channel_credentials()) as channel:
     # async with grpc.aio.insecure_channel("localhost:50051") as channel:
         stub = rollout_pb2_grpc.RolloutServiceStub(channel)
