@@ -98,16 +98,16 @@ class PPOEnv:
             last_val = self.futureplan.a_ego[-1] if self.futureplan.a_ego else 0.0
             self.futureplan.a_ego.extend([last_val] * pad_length)
         
-        input=np.column_stack((self.action_history[-int(CONTEXT_LENGTH/2):],
-                               roll_lataccel[-int(CONTEXT_LENGTH/2):],
-                               v_ego[-int(CONTEXT_LENGTH/2):],
-                               a_ego[-int(CONTEXT_LENGTH/2):],
-                               self.current_lataccel_history[-int(CONTEXT_LENGTH/2):],
-                               self.target_lataccel_history[-int(CONTEXT_LENGTH/2):],
-                               self.futureplan.lataccel[:int(CONTEXT_LENGTH/2)],
-                               self.futureplan.a_ego[:int(CONTEXT_LENGTH/2)],
-                               self.futureplan.roll_lataccel[:int(CONTEXT_LENGTH/2)],
-                               self.futureplan.v_ego[:int(CONTEXT_LENGTH/2)]))
+        input=np.column_stack((self.action_history[-int(CONTEXT_LENGTH):],
+                               roll_lataccel[-int(CONTEXT_LENGTH):],
+                               v_ego[-int(CONTEXT_LENGTH):],
+                               a_ego[-int(CONTEXT_LENGTH):],
+                               self.current_lataccel_history[-int(CONTEXT_LENGTH):],
+                               self.target_lataccel_history[-int(CONTEXT_LENGTH):]))
+                            #    self.futureplan.lataccel[:int(CONTEXT_LENGTH/2)],
+                            #    self.futureplan.a_ego[:int(CONTEXT_LENGTH/2)],
+                            #    self.futureplan.roll_lataccel[:int(CONTEXT_LENGTH/2)],
+                            #    self.futureplan.v_ego[:int(CONTEXT_LENGTH/2)]))
         input_tensor = torch.tensor(input, dtype=torch.float32).flatten().unsqueeze(0).to(self.device)  # Shape: (1, input_dim)
         # print(input_tensor.shape)
         # Get action distribution from policy
@@ -137,7 +137,7 @@ class PPOEnv:
         #     reward = -10.0
         alpha=0.01
         self.integral_error =(1-alpha)*self.integral_error+alpha*(current_lataccel - target) 
-        reward = -((current_lataccel - target)**2 * 50 + jerk**2 * 1)#-self.integral_error**2 
+        reward = -((current_lataccel - target)**2 * 50 + jerk**2 * 1)-self.integral_error**2 
         # Done condition
         done = self.step_idx >= len(self.data)
 
