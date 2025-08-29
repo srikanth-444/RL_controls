@@ -23,7 +23,7 @@ SERVICE_NAME = "RL-service-uxjht2q6"
 ecs = boto3.client('ecs' , region_name='us-east-2')
 
 class PPOTrainer:
-    def __init__(self, model: TinyPhysicsModel,policy:PPOPolicy, data_path: str, gamma=0.99, lam=0.95, clip_eps=0.2, epochs=10, batch_size=1, lr=3e-4,debug: bool = False) -> None:
+    def __init__(self, model: TinyPhysicsModel,policy:PPOPolicy, data_path: str, gamma=0.99, lam=0.95, clip_eps=0.2, epochs=10, batch_size=64, lr=3e-4,debug: bool = False) -> None:
         self.model = model
         self.device= torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {self.device}")
@@ -155,7 +155,7 @@ class PPOTrainer:
         plt.show()
     
 
-    async def train(self, num_rollouts=100):
+    async def train(self, num_rollouts=1000):
         
         pbar = tqdm(range(num_rollouts), desc='Training PPO')
         all_accel = []
@@ -268,13 +268,13 @@ def any_task_running():
     return any(task["lastStatus"] == "RUNNING" for task in details["tasks"])
 
 async def main():
-    # print("Waiting for a task to start running...")
-    # while not any_task_running():
-    #     sleep(5)
+    print("Waiting for a task to start running...")
+    while not any_task_running():
+        sleep(5)
 
     print("✅ Task running — doing my work now...")
-    # async with grpc.aio.secure_channel('envrollout.click:50051',grpc.ssl_channel_credentials()) as channel:
-    async with grpc.aio.insecure_channel("localhost:50051") as channel:
+    async with grpc.aio.secure_channel('envrollout.click:50051',grpc.ssl_channel_credentials()) as channel:
+    # async with grpc.aio.insecure_channel("localhost:50051") as channel:
         stub = rollout_pb2_grpc.RolloutServiceStub(channel)
 
         model = TinyPhysicsModel("./models/tinyphysics.onnx", debug=False)
@@ -286,7 +286,7 @@ async def main():
 
         await trainer.train()
         total_rewards = []
-        for env_path in tqdm(trainer.env_list[:1]):
+        for env_path in tqdm(trainer.env_list[:100]):
             _,_,rewards=trainer.evaluate_policy(env_path, render=False)
             total_rewards.append(rewards)
         print(f"Average Reward over 100 environments: {np.mean(total_rewards):.2f}")
