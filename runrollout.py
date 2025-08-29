@@ -35,6 +35,7 @@ def compute_returns_and_advantages( buffer,gama=0.99, lam=0.95):
 
         return returns, advantages
 def run_rollout( env: PPOEnv,gama,lam) -> None:
+            # print("entered run rollout")
             env.reset()
             env.rollout_buffer = []  # Reset the rollout buffer
             done = False
@@ -58,7 +59,7 @@ def run_rollout( env: PPOEnv,gama,lam) -> None:
 class RolloutServicer(rollout_pb2_grpc.RolloutServiceServicer):
     def __init__(self):
         self.model = TinyPhysicsModel("./models/tinyphysics.onnx", debug=False)
-        self.policy = PPOPolicy(input_dim=(10 * 10))
+        self.policy = PPOPolicy(input_dim=(20 * 6))
 
     def RunRollout(self, request, context):
         gama =request.gama

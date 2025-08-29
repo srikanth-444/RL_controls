@@ -98,12 +98,12 @@ class PPOEnv:
             last_val = self.futureplan.a_ego[-1] if self.futureplan.a_ego else 0.0
             self.futureplan.a_ego.extend([last_val] * pad_length)
         
-        input=np.column_stack((self.action_history[-int(CONTEXT_LENGTH):],
-                               roll_lataccel[-int(CONTEXT_LENGTH):],
-                               v_ego[-int(CONTEXT_LENGTH):],
-                               a_ego[-int(CONTEXT_LENGTH):],
-                               self.current_lataccel_history[-int(CONTEXT_LENGTH):],
-                               self.target_lataccel_history[-int(CONTEXT_LENGTH):]))
+        input=np.column_stack((self.action_history[-CONTEXT_LENGTH:],
+                               roll_lataccel[-CONTEXT_LENGTH:],
+                               v_ego[-CONTEXT_LENGTH:],
+                               a_ego[-CONTEXT_LENGTH:],
+                               self.current_lataccel_history[-CONTEXT_LENGTH:],
+                               self.target_lataccel_history[-CONTEXT_LENGTH:]))
                             #    self.futureplan.lataccel[:int(CONTEXT_LENGTH/2)],
                             #    self.futureplan.a_ego[:int(CONTEXT_LENGTH/2)],
                             #    self.futureplan.roll_lataccel[:int(CONTEXT_LENGTH/2)],
@@ -137,7 +137,7 @@ class PPOEnv:
         #     reward = -10.0
         alpha=0.01
         self.integral_error =(1-alpha)*self.integral_error+alpha*(current_lataccel - target) 
-        reward = -((current_lataccel - target)**2 * 50 + jerk**2 * 1)-self.integral_error**2 
+        reward = -((current_lataccel - target)**2 * 5000 + jerk**2 * 1)-self.integral_error**2 
         # Done condition
         done = self.step_idx >= len(self.data)
 
