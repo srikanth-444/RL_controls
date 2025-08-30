@@ -118,7 +118,7 @@ class PPOTrainer:
         rewards = []
 
         while not done:
-            cost, _, _, done = env.step()
+            cost, _, _, done = env.step(evaluation=True)
             rewards.append(cost)
 
         
@@ -232,7 +232,7 @@ async def run_single_request(stub, path, weights,gama,lam):
     request = rollout_pb2.RolloutRequest(data_path=path,weights=weights, gama=gama, lam=lam)  
     response = await stub.RunRollout(request)
 
-    obs_tensor = torch.tensor(response.obs.data).view(-1, 20*6)  # reshape here
+    obs_tensor = torch.tensor(response.obs.data).view(-1, 10*10)  # reshape here
     actions_tensor = torch.tensor(response.actions.data,dtype=torch.float32).unsqueeze(-1)  # ensure actions are 2D
     old_log_probs_tensor = torch.tensor(response.old_log_probs.data, dtype=torch.float32).unsqueeze(-1)  # ensure log_probs are 2D
     returns_tensor = torch.tensor(response.returns.data).unsqueeze(-1)  # ensure returns are 2D
@@ -269,8 +269,8 @@ def any_task_running():
 
 async def main():
     print("Waiting for a task to start running...")
-    while not any_task_running():
-        sleep(5)
+    # while not any_task_running():
+    #     sleep(5)
 
     print("✅ Task running — doing my work now...")
     async with grpc.aio.secure_channel('envrollout.click:50051',grpc.ssl_channel_credentials()) as channel:
@@ -278,7 +278,7 @@ async def main():
         stub = rollout_pb2_grpc.RolloutServiceStub(channel)
 
         model = TinyPhysicsModel("./models/tinyphysics.onnx", debug=False)
-        policy = PPOPolicy(input_dim=(20* 6))
+        policy = PPOPolicy(input_dim=(10 * 10))
         data_dir = Path("./data")
 
         trainer = PPOTrainer(model=model, policy=policy, data_path=data_dir, debug=False)
@@ -286,7 +286,7 @@ async def main():
 
         await trainer.train()
         total_rewards = []
-        for env_path in tqdm(trainer.env_list[:100]):
+        for env_path in tqdm(trainer.env_list[:1]):
             _,_,rewards=trainer.evaluate_policy(env_path, render=False)
             total_rewards.append(rewards)
         print(f"Average Reward over 100 environments: {np.mean(total_rewards):.2f}")

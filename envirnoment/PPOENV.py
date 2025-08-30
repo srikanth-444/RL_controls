@@ -74,7 +74,7 @@ class PPOEnv:
                 a_ego=self.data['a_ego'].values[step_idx + 1:step_idx + tinyphysics.FUTURE_PLAN_STEPS].tolist()
             )
         )
-    def step(self) -> None:
+    def step(self,evaluation=False) -> None:
         state, target, futureplan = self.get_state_target_futureplan(self.step_idx)
         self.state_history.append(state)
         self.target_lataccel_history.append(target)
@@ -98,16 +98,16 @@ class PPOEnv:
             last_val = self.futureplan.a_ego[-1] if self.futureplan.a_ego else 0.0
             self.futureplan.a_ego.extend([last_val] * pad_length)
         
-        input=np.column_stack((self.action_history[-CONTEXT_LENGTH:],
-                               roll_lataccel[-CONTEXT_LENGTH:],
-                               v_ego[-CONTEXT_LENGTH:],
-                               a_ego[-CONTEXT_LENGTH:],
-                               self.current_lataccel_history[-CONTEXT_LENGTH:],
-                               self.target_lataccel_history[-CONTEXT_LENGTH:]))
-                            #    self.futureplan.lataccel[:int(CONTEXT_LENGTH/2)],
-                            #    self.futureplan.a_ego[:int(CONTEXT_LENGTH/2)],
-                            #    self.futureplan.roll_lataccel[:int(CONTEXT_LENGTH/2)],
-                            #    self.futureplan.v_ego[:int(CONTEXT_LENGTH/2)]))
+        input=np.column_stack((self.action_history[-int(CONTEXT_LENGTH/2):],
+                               roll_lataccel[-int(CONTEXT_LENGTH/2):],
+                               v_ego[-int(CONTEXT_LENGTH/2):],
+                               a_ego[-int(CONTEXT_LENGTH/2):],
+                               self.current_lataccel_history[-int(CONTEXT_LENGTH/2):],
+                               self.target_lataccel_history[-int(CONTEXT_LENGTH/2):],
+                               self.futureplan.lataccel[:int(CONTEXT_LENGTH/2)],
+                               self.futureplan.a_ego[:int(CONTEXT_LENGTH/2)],
+                               self.futureplan.roll_lataccel[:int(CONTEXT_LENGTH/2)],
+                               self.futureplan.v_ego[:int(CONTEXT_LENGTH/2)]))
         input_tensor = torch.tensor(input, dtype=torch.float32).flatten().unsqueeze(0).to(self.device)  # Shape: (1, input_dim)
         # print(input_tensor.shape)
         # Get action distribution from policy
@@ -115,8 +115,10 @@ class PPOEnv:
         dist = torch.distributions.Normal(mean, std)
         action = dist.sample()
         log_prob = dist.log_prob(action)
-
-        action = action.item()
+        if evaluation:
+            action = dist.mean.item()
+        else:
+            action = action.item()
         self.action_history.append(action)
         self.sim_step(self.step_idx)
         self.step_idx += 1
