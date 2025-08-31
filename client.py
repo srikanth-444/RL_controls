@@ -269,8 +269,8 @@ def any_task_running():
 
 async def main():
     print("Waiting for a task to start running...")
-    # while not any_task_running():
-    #     sleep(5)
+    while not any_task_running():
+        sleep(5)
 
     print("✅ Task running — doing my work now...")
     async with grpc.aio.secure_channel('envrollout.click:50051',grpc.ssl_channel_credentials()) as channel:
@@ -286,7 +286,7 @@ async def main():
 
         await trainer.train()
         total_rewards = []
-        for env_path in tqdm(trainer.env_list[:1]):
+        for env_path in tqdm(trainer.env_list[:100]):
             _,_,rewards=trainer.evaluate_policy(env_path, render=False)
             total_rewards.append(rewards)
         print(f"Average Reward over 100 environments: {np.mean(total_rewards):.2f}")

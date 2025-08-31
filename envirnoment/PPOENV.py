@@ -139,7 +139,7 @@ class PPOEnv:
         #     reward = -10.0
         alpha=0.01
         self.integral_error =(1-alpha)*self.integral_error+alpha*(current_lataccel - target) 
-        reward = -((current_lataccel - target)**2 * 50 + jerk**2 * 1)#-self.integral_error**2 
+        reward = -((current_lataccel - target)**2 * 500 + jerk**2 * 1)#-self.integral_error**2 
         # Done condition
         done = self.step_idx >= len(self.data)
 
